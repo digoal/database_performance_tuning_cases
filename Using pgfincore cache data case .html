@@ -1,0 +1,25 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=gbk">
+<title>PostgreSQL DBA</title>
+<style type="text/css">
+.blogcnt{line-height:160%;font-size:14px;text-align:left;word-wrap:break-word;}
+.blogcnt *{line-height:160%;}
+.blogcnt p{margin:0 0 10px;}
+.blogcnt ul,.nbw-blog ol{margin:5px 0 5px 40px;padding:0}
+.blogcnt em{font-style:italic;}
+.blogcnt blockquote{font-size:1em;margin:auto 0 auto 35px;}
+.blogcnt img{border:0;max-width:100%;}
+</style>
+</head>
+<body style="color:#444444;">
+<h1 id="blog-Title"><a href="index.html">PostgreSQL DBA</a></h1>
+<div id="" style="padding:0 20px;">
+	<h2 id="">PostgreSQL: 使用 pgfincore 预加载数据优化一列</h2>
+	<h5 id="">2012-07-24 13:38:39&nbsp;&nbsp;&nbsp;<a href="http://blog.163.com/francs3/blog/static/40576727201262412517235/" target="_blank">查看原文&gt;&gt;</a></h5>
+	<div class="" id="" style="padding:0 20px;">
+		<div class="blogcnt" style="width:800px;">   <P><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;最近有个新项目业务上升较快，数据库的压力也是直线上升，日最高负载上升到 100 左右，日平均负载<BR>上升到 25 左右，这个负载已经相当的高了，出现这种情况通常是由于少数 SQL 语句性能较差，需要从 SQL<BR>调优着手，目前这个应用需要优化的地方很多，比如有些走索引的 count 语句并没有做到前台应用缓存，以<BR>及部分 SQL 需要从业务角度进行逻辑优化，但下一个应用版本业务方没有这么快能够上线，所以针对这种情<BR>况，只能从数据库端进行优化，寻找解决问题的方法。</P>  <P>&nbsp;</P>  <P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;前面已经说过这个业务近期数据量增长比较快，数据库内存已经不够缓存业务数据了，数据库内存 24 GB，<BR>核心业心业务表数据（ 24 GB） 左右，核心数据索引 30 GB 左右，数据库内存已经没有能力完全缓存这部分<BR>数据和索引，但是目压力最大的一个 SQL 为新注册用户发起，新用户注册上线即会触发这个 SQL，而新用户查<BR>找的数据从前台缓存（ memcache ） 无法命中，所以这部分查询落到数据库中实时查询，故数据库压力会很大，<BR>频繁出现数据库负载的超过 100 的尴尬局面。</P>  <P><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 经过分析，根据 iostat 命令输出，发现其中一块盘，读非常频繁，远远大于写，而数据库的数据大部<BR>分落在这个盘，此时也说明内存已经不够了，这时应该给数据库内存扩容了。</P>  <P><BR>&nbsp;&nbsp;&nbsp;&nbsp; 最后，给数据库内存扩容到 64 GB，之后并且用 pgfincore 缓存技术将核心业务表和常用索引预先加载到<BR>数据库缓存，这样可以大大提高新用户注册后查询数据库时 cache 的命中率(由于新用户注册时发出的 SQL ，<BR>并不能命中 memcache 前台缓存)，关于 pgfincore 的使用可以参考之前的 blog :<BR><A href="http://francs3.blog.163.com/blog/static/4057672720107541611270/"  ><STRONG><FONT color="#0000ff" >http://francs3.blog.163.com/blog/static/4057672720107541611270/</FONT></STRONG></A></P>  <P>&nbsp;</P>  <P>&nbsp;&nbsp;&nbsp; 数据库内存扩容后，日最高负载大辐下降，日平均负载大大下降，如下图：<BR>&nbsp;&nbsp;&nbsp; <BR>&nbsp;<BR><STRONG><FONT color="#0000ff" size="4" >--1 扩容前后日最高负载图 </FONT></STRONG></P>  <DIV><IMG style="MARGIN: 0px 10px 0px 0px;"  title="PostgreSQL: 使用 pgfincore 预加载数据优化一列 - francs - PostgreSQL DBA"  alt="PostgreSQL: 使用 pgfincore 预加载数据优化一列 - francs - PostgreSQL DBA"  src="http://img3.ph.126.net/bM-i1p7hAj1cQ0OZ2BgTvA==/6597264380214640403.jpg"  ></DIV>  <P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </P>  <P>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 备注：扩容日期 7-19，数据库扩容后，日最高负载由 100 降到 20 左右。</P>  <P>&nbsp;</P>  <P><STRONG><FONT color="#0000ff" size="4" >--2 扩容前后日平均负载图 </FONT></STRONG></P>  <DIV><IMG style="MARGIN: 0px 10px 0px 0px;"  title="PostgreSQL: 使用 pgfincore 预加载数据优化一列 - francs - PostgreSQL DBA"  alt="PostgreSQL: 使用 pgfincore 预加载数据优化一列 - francs - PostgreSQL DBA"  src="http://img9.ph.126.net/d9v-XZOq4yELmeantfAogA==/6597150031005345619.jpg"  ></DIV>  <P><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 备注：扩容日期 <STRONG><FONT color="#ff0000" >7-19</FONT></STRONG>， 数据库扩容后，日平均负载由 25 降到 2 左右。</P>  <P>&nbsp;</P>  <P><STRONG><FONT color="#0000ff" size="4" >--3 张扩容前的数据库负载</FONT></STRONG></P>  <DIV><IMG title="PostgreSQL: 使用 pgfincore 预加载数据优化一列 - francs - PostgreSQL DBA"  alt="PostgreSQL: 使用 pgfincore 预加载数据优化一列 - francs - PostgreSQL DBA"  style="MARGIN: 0px 10px 0px 0px;"  src="http://img6.ph.126.net/-i8it_4FCvu1T2bTxPjxKA==/6597136836865825746.jpg"  ></DIV>  <P>&nbsp;&nbsp; 备注：扩容前07-16 数据库的负载，上图的负载够猛的！</P>  <P><STRONG><FONT color="#0000ff" size="4" ></FONT></STRONG>&nbsp;</P>  <P><STRONG><FONT color="#0000ff" size="4" >--4 张扩容后的数据库负载</FONT></STRONG></P>  <DIV><IMG title="PostgreSQL: 使用 pgfincore 预加载数据优化一列 - francs - PostgreSQL DBA"  alt="PostgreSQL: 使用 pgfincore 预加载数据优化一列 - francs - PostgreSQL DBA"  style="MARGIN: 0px 10px 0px 0px;"  src="http://img2.ph.126.net/-R56Ss-E3gUIqpCGEJDzwQ==/1570911845039853862.jpg"  ></DIV>  <P>&nbsp; 备注：上图为扩容后 7-20 号的数据库负载。</P>  <P><STRONG><FONT color="#0000ff" size="4" ></FONT></STRONG>&nbsp;</P>  <P><STRONG><FONT color="#0000ff" size="4" >--5 &nbsp;后续优化工作</FONT></STRONG></P>  <P><FONT color="#000000" ><FONT size="3" ><STRONG>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</STRONG>&nbsp;&nbsp;&nbsp;&nbsp; 通过增加内存增加数据库性带来的效果确实不错，但这并不是解决问题的最</FONT></FONT></P>  <P><FONT color="#000000" size="3" >优方法，目前这个项目需要优化的地方还很多，例如走索引的 count 语句做到前台</FONT></P>  <P><FONT color="#000000" size="3" >memcache 中，以及应用逻辑的优化等，但通过增加内存并且利用 <STRONG><FONT color="#ff0000" >pgfincore</FONT></STRONG>&nbsp; 技术</FONT></P>  <P><FONT size="3" >将业务数据提前缓存到 OS cache 中的做法确实能对特定场合产生极大的效应，例如</FONT></P>  <P><FONT size="3" >当数据库的压力大部分由应用系统新用户注册发起时。</FONT><WBR></P></div>
+	</div>
+</div>
+</body>
+</html>
